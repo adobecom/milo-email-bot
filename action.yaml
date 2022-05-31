@@ -1,0 +1,16 @@
+name: 'Milo Email Bot'
+
+description: 'consume the output of the previous action and create a new issue in the repository'
+
+inputs:
+  repo-token:
+    default: ${{ github.token }}
+    description: 'Token with permissions to do repo things'
+  psi-key:
+    description: 'The Page Speed Insights key'
+  relative-url:
+    default: '/'
+
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
