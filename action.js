@@ -51,8 +51,6 @@ async function sendMail(title, date, content, approvers, releasedBy, files) {
 }
 
 async function run() {
-  console.log(process.env.TO_EMAIL);
-
   const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
   const config = process.env.GITHUB_ACTIONS ? getConfig() : BASE_CONFIG;
 

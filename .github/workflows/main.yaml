@@ -2,7 +2,7 @@ name: Run Milo Bot Release Email
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, edited]
+    types: [opened, synchronize, reopened, edited, closed]
     branches:
       - main
 
