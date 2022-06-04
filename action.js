@@ -15,8 +15,8 @@ const BASE_CONFIG = {
 function getConfig() {
   // Build URL
   return {
-    owner: github.context.payload.pull_request.head.repo.owner.login,
-    repo: github.context.payload.pull_request.head.repo.name,
+    owner: github.context.payload.pull_request.base.repo.owner.login,
+    repo: github.context.payload.pull_request.base.repo.name,
     pull_number: github.context.payload.pull_request.number
   }
 }
@@ -81,6 +81,7 @@ async function run() {
     // Send the mail
     sendMail(title, date, content, approvers, merged_by.login, changed_files);
   } else {
+    console.log(config);
     console.log(title, date, content, approvers, changed_files);
     console.log('PR has not been merged');
   }
