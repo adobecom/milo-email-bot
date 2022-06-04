@@ -73,7 +73,7 @@ async function run() {
   const date = getDate(merged_at);
 
   const md = new MarkdownIt();
-  const content = md.render(body);
+  const content = body ? md.render(body) : '';
 
   const approvers = approved.join(', ');
 
