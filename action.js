@@ -3,13 +3,14 @@ import { Octokit } from 'octokit';
 import MarkdownIt from 'markdown-it';
 import sgMail from '@sendgrid/mail';
 
+const USER_BASE = 'GET /users/{username}';
 const PULL_BASE = 'GET /repos/{owner}/{repo}/pulls/{pull_number}';
 const REVIEW_BASE = 'GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews';
 
 const BASE_CONFIG = {
   owner: 'adobecom',
   repo: 'milo',
-  pull_number: 34,
+  pull_number: 44,
 };
 
 function getConfig() {
@@ -50,6 +51,11 @@ async function sendMail(title, date, content, approvers, releasedBy, files) {
   console.log(resp);
 }
 
+async function getName(octokit, username) {
+  const user = await octokit.request(USER_BASE, { username });
+  return user.data.name ? user.data.name : user.data.login;
+}
+
 async function run() {
   console.log(github.context.payload.pull_request);
 
@@ -62,28 +68,31 @@ async function run() {
 
   // Get reviewer info
   const reviews = await octokit.request(REVIEW_BASE, config);
-  const approved = reviews.data.reduce((rdx, review) => {
+  const namePromises = reviews.data.reduce((rdx, review) => {
     if (review.state === 'APPROVED') {
-      rdx.push(review.user.login);
+      const name = getName(octokit, review.user.login);
+      rdx.push(name);
     }
     return rdx;
   }, []);
 
   // Formatting cleanup
+  const releasedBy = merged_by.login ? await getName(octokit, merged_by.login) : null;
   const date = getDate(merged_at);
-
   const md = new MarkdownIt();
   const content = body ? md.render(body) : '';
+  const names = await Promise.all(namePromises);
+  const approvers = names.join('<br/>');
 
-  const approvers = approved.join(', ');
+  // Log for debugging purposes
+  console.log(config);
+  console.log(title, date, content, approvers, releasedBy, changed_files);
 
-  if (merged_by) {
-    // Send the mail
-    sendMail(title, date, content, approvers, merged_by.login, changed_files);
+  if (releasedBy && body) {
+    console.log('Sending mail');
+    sendMail(title, date, content, approvers, releasedBy, changed_files);
   } else {
-    console.log(config);
-    console.log(title, date, content, approvers, changed_files);
-    console.log('PR has not been merged');
+    console.log('Something went wrong');
   }
 }
 run();
