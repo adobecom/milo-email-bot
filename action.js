@@ -18,7 +18,8 @@ function getConfig() {
   return {
     owner: github.context.payload.pull_request.base.repo.owner.login,
     repo: github.context.payload.pull_request.base.repo.name,
-    pull_number: github.context.payload.pull_request.number
+    pull_number: github.context.payload.pull_request.number,
+    release: getRelease(github.context.payload.pull_request.labels),
   }
 }
 
@@ -56,9 +57,12 @@ async function getName(octokit, username) {
   return user.data.name ? user.data.name : user.data.login;
 }
 
+function getRelease(labels) {
+  return labels.find(label => label.name === 'release');
+}
+
 async function run() {
   console.log(github.context.payload.pull_request);
-  console.log(github.context.payload.pull_request.labels);
 
   const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
   const config = process.env.GITHUB_ACTIONS ? getConfig() : BASE_CONFIG;
@@ -78,7 +82,7 @@ async function run() {
   }, []);
 
   // Formatting cleanup
-  const releasedBy = merged_by.login ? await getName(octokit, merged_by.login) : null;
+  const releasedBy = merged_by?.login ? await getName(octokit, merged_by.login) : null;
   const date = getDate(merged_at);
   const md = new MarkdownIt();
   const content = body ? md.render(body) : '';
@@ -89,7 +93,7 @@ async function run() {
   console.log(config);
   console.log(title, date, content, approvers, releasedBy, changed_files);
 
-  if (releasedBy && body) {
+  if (releasedBy && body && config.release) {
     console.log('Sending mail');
     sendMail(title, date, content, approvers, releasedBy, changed_files);
   } else {
