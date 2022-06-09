@@ -58,6 +58,7 @@ async function getName(octokit, username) {
 
 async function run() {
   console.log(github.context.payload.pull_request);
+  console.log(github.context.payload.pull_request.labels);
 
   const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
   const config = process.env.GITHUB_ACTIONS ? getConfig() : BASE_CONFIG;
