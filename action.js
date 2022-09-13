@@ -10,7 +10,8 @@ const REVIEW_BASE = 'GET /repos/{owner}/{repo}/pulls/{pull_number}/reviews';
 const BASE_CONFIG = {
   owner: 'adobecom',
   repo: 'milo',
-  pull_number: 44,
+  pull_number: 178,
+  release: true,
 };
 
 function getConfig() {
@@ -29,7 +30,7 @@ function getDate(mergeDate) {
   return `${rawDate.toDateString()} ${rawDate.toLocaleTimeString('en-US', options)}`;
 }
 
-async function sendMail(title, date, content, approvers, releasedBy, files) {
+async function sendMail({ title, date, content, createdBy, approvers, releasedBy, files }) {
   sgMail.setApiKey(process.env.SG_KEY);
   const msg = {
     to: process.env.TO_EMAIL,
@@ -42,12 +43,12 @@ async function sendMail(title, date, content, approvers, releasedBy, files) {
       title,
       date,
       content,
+      createdBy,
       approvers,
       releasedBy,
       files,
     },
   };
-
   const resp = await sgMail.send(msg);
   console.log(resp);
 }
@@ -69,7 +70,7 @@ async function run() {
 
   // Get base data
   const pull = await octokit.request(PULL_BASE, config);
-  const { title, merged_at, changed_files, merged_by, body } = pull.data;
+  const { title, merged_at, changed_files, merged_by, body, user } = pull.data;
 
   // Get reviewer info
   const reviews = await octokit.request(REVIEW_BASE, config);
@@ -82,20 +83,22 @@ async function run() {
   }, []);
 
   // Formatting cleanup
+  const createdBy = await getName(octokit, user.login);
   const releasedBy = merged_by?.login ? await getName(octokit, merged_by.login) : null;
   const date = getDate(merged_at);
   const md = new MarkdownIt();
   const content = body ? md.render(body) : '';
   const names = await Promise.all(namePromises);
   const approvers = names.join('<br/>');
+  const files = changed_files > 1 ? `${changed_files} files` : `${changed_files} file`;
 
   // Log for debugging purposes
   console.log(config);
-  console.log(title, date, content, approvers, releasedBy, changed_files);
+  console.log(title, date, content, approvers, createdBy, releasedBy, files);
 
   if (releasedBy && body && config.release) {
     console.log('Sending mail');
-    sendMail(title, date, content, approvers, releasedBy, changed_files);
+    sendMail({ title, date, content, approvers, createdBy, releasedBy, files });
   } else {
     console.log('Something went wrong');
   }
