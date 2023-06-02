@@ -51,13 +51,13 @@ async function sendMail({ title, date, content, createdBy, approvers, releasedBy
   };
 
   if (newFeature) {
-    msg.to = process.env.TO_EMAIL_NEW_FEATURE,
+    msg.to = process.env.TO_EMAIL_NEW_FEATURE;
     const nfResp = await sgMail.send(msg);
     console.log(nfResp);
   }
 
   if (highImpact) {
-    msg.to = process.env.TO_EMAIL_HIGH_IMPACT,
+    msg.to = process.env.TO_EMAIL_HIGH_IMPACT;
     const hiResp = await sgMail.send(msg);
     console.log(hiResp);
   }
