@@ -11,7 +11,7 @@ const BASE_CONFIG = {
   owner: 'adobecom',
   repo: 'milo',
   pull_number: 178,
-  release: true,
+  newFeature: true,
 };
 
 function getConfig() {
@@ -20,7 +20,8 @@ function getConfig() {
     owner: github.context.payload.pull_request.base.repo.owner.login,
     repo: github.context.payload.pull_request.base.repo.name,
     pull_number: github.context.payload.pull_request.number,
-    release: getRelease(github.context.payload.pull_request.labels),
+    newFeature: hasLabel(github.context.payload.pull_request.labels, 'new-feature'),
+    highImpact: hasLabel(github.context.payload.pull_request.labels, 'high-impact'),
   }
 }
 
@@ -30,10 +31,9 @@ function getDate(mergeDate) {
   return `${rawDate.toDateString()} ${rawDate.toLocaleTimeString('en-US', options)}`;
 }
 
-async function sendMail({ title, date, content, createdBy, approvers, releasedBy, files }) {
+async function sendMail({ title, date, content, createdBy, approvers, releasedBy, files, newFeature, highImpact }) {
   sgMail.setApiKey(process.env.SG_KEY);
   const msg = {
-    to: process.env.TO_EMAIL,
     from: {
       name: process.env.FROM_NAME,
       email: process.env.FROM_EMAIL,
@@ -49,8 +49,18 @@ async function sendMail({ title, date, content, createdBy, approvers, releasedBy
       files,
     },
   };
-  const resp = await sgMail.send(msg);
-  console.log(resp);
+
+  if (newFeature) {
+    msg.to = process.env.TO_EMAIL_NEW_FEATURE,
+    const resp = await sgMail.send(msg);
+    console.log(resp);
+  }
+
+  if (highImpact) {
+    msg.to = process.env.TO_EMAIL_HIGH_IMPACT,
+    const resp = await sgMail.send(msg);
+    console.log(resp);
+  }
 }
 
 async function getName(octokit, username) {
@@ -58,8 +68,8 @@ async function getName(octokit, username) {
   return user.data.name ? user.data.name : user.data.login;
 }
 
-function getRelease(labels) {
-  return labels.find(label => label.name === 'release');
+function hasLabel(labels, labelName) {
+  return labels.find(label => label.name === labelName);
 }
 
 async function run() {
@@ -96,9 +106,19 @@ async function run() {
   console.log(config);
   console.log(title, date, content, approvers, createdBy, releasedBy, files);
 
-  if (releasedBy && body && config.release) {
+  if (releasedBy && body && (config.newFeature || config.highImpact)) {
     console.log('Sending mail');
-    sendMail({ title, date, content, approvers, createdBy, releasedBy, files });
+    sendMail({
+      title,
+      date,
+      content,
+      approvers,
+      createdBy,
+      releasedBy,
+      files,
+      newFeature: config.newFeature,
+      highImpact: config.highImpact,
+    });
   } else {
     console.log('Something went wrong');
   }
